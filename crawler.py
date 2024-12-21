@@ -309,31 +309,100 @@ class APICrawler:
             soup = BeautifulSoup(html, 'html.parser')
             text_content = soup.get_text()
 
-            # Create a prompt for API extraction
-            prompt = """Please analyze this API documentation text and extract the following information in JSON format:
-1. All API endpoints (paths)
-2. HTTP methods for each endpoint
-3. Parameters (path, query, body)
-4. Response formats
-5. Authentication requirements
+            # Define function tools for API extraction
+            tools = [
+                {
+                    "name": "extract_api_info",
+                    "description": "Extract endpoint details from text and format them as an OpenAPI path specification.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "path": { "type": "string", "description": "The API endpoint path" },
+                            "method": { "type": "string", "description": "HTTP method (GET, POST, PUT, DELETE, PATCH)" },
+                            "description": { "type": "string", "description": "Description of what the endpoint does" },
+                            "parameters": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": { "type": "string" },
+                                        "in": { "type": "string", "enum": ["path", "query", "body"] },
+                                        "required": { "type": "boolean" },
+                                        "schema": { "type": "object" }
+                                    }
+                                }
+                            },
+                            "response_format": {
+                                "type": "object",
+                                "properties": {
+                                    "content_type": { "type": "string" },
+                                    "schema": { "type": "object" }
+                                }
+                            }
+                        },
+                        "required": ["path", "method"]
+                    }
+                }
+            ]
 
-Format the response as an OpenAPI specification with paths, methods, and schemas.
+            # Create a prompt for API extraction
+            prompt = """Analyze this API documentation text and extract API endpoints with their details. Use the extract_api_info function to format each endpoint as an OpenAPI specification.
 
 Documentation text:
 {text}""".format(text=text_content[:8000])  # Limit text length to avoid token limits
 
-            # Call Tongyi Qianwen API
+            # Call Tongyi Qianwen API with function tools
             completion = client.chat.completions.create(
                 model="qwen-plus",
                 messages=[
-                    {"role": "system", "content": "You are an API documentation parser. Extract API details and format them as OpenAPI specifications."},
+                    {"role": "system", "content": "You are an API documentation parser. Extract API details and format them as OpenAPI specifications. Use the provided function to structure the output."},
                     {"role": "user", "content": prompt}
-                ]
+                ],
+                tools=tools,
+                tool_choice="auto",
+                result_format="message"
             )
 
             # Parse the response
             try:
-                response_text = completion.choices[0].message.content
+                message = completion.choices[0].message
+                
+                # Check for function call response
+                if hasattr(message, 'function_call') and message.function_call:
+                    fn_name = message.function_call.name
+                    if fn_name == "extract_api_info":
+                        # Parse function arguments
+                        fn_args = json.loads(message.function_call.arguments)
+                        
+                        # Build OpenAPI spec from function arguments
+                        path = fn_args.get('path')
+                        method = fn_args.get('method', '').lower()
+                        if path and method:
+                            spec = {
+                                "paths": {
+                                    path: {
+                                        method: {
+                                            "summary": fn_args.get('description', ''),
+                                            "description": fn_args.get('description', ''),
+                                            "parameters": fn_args.get('parameters', []),
+                                            "responses": {
+                                                "200": {
+                                                    "description": "Successful response",
+                                                    "content": {
+                                                        fn_args.get('response_format', {}).get('content_type', 'application/json'): {
+                                                            "schema": fn_args.get('response_format', {}).get('schema', {"type": "object"})
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            return spec
+                
+                # Fallback to content parsing if no function call or invalid function response
+                response_text = message.content
                 # Try to extract JSON from the response
                 # Look for JSON block in markdown or plain text
                 json_start = response_text.find('{')
@@ -345,7 +414,8 @@ Documentation text:
                     # Validate basic OpenAPI structure
                     if isinstance(spec, dict) and 'paths' in spec:
                         return spec
-            except (json.JSONDecodeError, AttributeError, IndexError):
+            except (json.JSONDecodeError, AttributeError, IndexError) as e:
+                print(f"Error parsing AI response: {str(e)}")
                 return None
 
         except Exception as e:
