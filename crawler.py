@@ -9,12 +9,14 @@ to build an OpenAPI specification from the content.
 
 import asyncio
 import json
+import os
 import sys
 from typing import Dict, List, Optional, Set
 from urllib.parse import urljoin, urlparse
 
 import aiohttp
 from bs4 import BeautifulSoup
+from openai import OpenAI
 import requests
 
 
@@ -145,7 +147,11 @@ class APICrawler:
         api_indicators = {
             'endpoint', 'api reference', 'api documentation', 'rest api',
             'http request', 'http response', 'parameters', 'response body',
-            'request body', 'authentication', 'authorization'
+            'request body', 'authentication', 'authorization',
+            # Chinese API documentation indicators
+            '接口文档', 'API文档', '接口说明', '接口定义', '请求参数',
+            '响应参数', '返回参数', '认证方式', '调用方法', 'HTTP请求',
+            'HTTP响应'
         }
         
         # Check page title
@@ -194,6 +200,10 @@ class APICrawler:
                                 endpoints.append(endpoint)
                     
                     if not endpoints:
+                        # Try AI-based parsing as fallback
+                        ai_spec = await self.parse_with_ai(html)
+                        if ai_spec:
+                            return ai_spec
                         return None
                         
                     # Convert to OpenAPI format
@@ -283,6 +293,65 @@ class APICrawler:
                             
         return None
         
+    async def parse_with_ai(self, html: str) -> Optional[dict]:
+        """
+        Use Tongyi Qianwen API to parse API documentation when standard parsing fails.
+        Returns a partial OpenAPI spec if successful, None otherwise.
+        """
+        try:
+            # Initialize Tongyi Qianwen client
+            client = OpenAI(
+                api_key=os.getenv("DASHSCOPE_API_KEY"),
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+            )
+
+            # Extract text content from HTML
+            soup = BeautifulSoup(html, 'html.parser')
+            text_content = soup.get_text()
+
+            # Create a prompt for API extraction
+            prompt = """Please analyze this API documentation text and extract the following information in JSON format:
+1. All API endpoints (paths)
+2. HTTP methods for each endpoint
+3. Parameters (path, query, body)
+4. Response formats
+5. Authentication requirements
+
+Format the response as an OpenAPI specification with paths, methods, and schemas.
+
+Documentation text:
+{text}""".format(text=text_content[:8000])  # Limit text length to avoid token limits
+
+            # Call Tongyi Qianwen API
+            completion = client.chat.completions.create(
+                model="qwen-plus",
+                messages=[
+                    {"role": "system", "content": "You are an API documentation parser. Extract API details and format them as OpenAPI specifications."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            # Parse the response
+            try:
+                response_text = completion.choices[0].message.content
+                # Try to extract JSON from the response
+                # Look for JSON block in markdown or plain text
+                json_start = response_text.find('{')
+                json_end = response_text.rfind('}')
+                if json_start >= 0 and json_end > json_start:
+                    json_str = response_text[json_start:json_end + 1]
+                    spec = json.loads(json_str)
+                    
+                    # Validate basic OpenAPI structure
+                    if isinstance(spec, dict) and 'paths' in spec:
+                        return spec
+            except (json.JSONDecodeError, AttributeError, IndexError):
+                return None
+
+        except Exception as e:
+            print(f"AI parsing failed: {str(e)}")
+            return None
+
     def combine_specs(self) -> dict:
         """
         Combine all the partial OpenAPI specs into a single complete specification.
