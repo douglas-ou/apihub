@@ -33,13 +33,16 @@ class APICrawler:
         common_paths = [
             'openapi.json',
             'swagger.json',
+            'v2/swagger.json',  # Common in Swagger 2.0 APIs
+            'v3/openapi.json',  # Common in OpenAPI 3.0 APIs
             'api/openapi.json',
             'api/swagger.json',
             'docs/openapi.json',
             'docs/swagger.json',
             '.well-known/openapi.json',
             'api-docs/openapi.json',
-            'api-docs/swagger.json'
+            'api-docs/swagger.json',
+            'swagger/v2/swagger.json'  # Another common Swagger 2.0 path
         ]
         
         async with aiohttp.ClientSession() as session:
