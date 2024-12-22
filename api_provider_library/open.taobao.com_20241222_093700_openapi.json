@@ -1,0 +1,9 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Documentation",
+    "version": "1.0.0",
+    "description": "API documentation crawled from https://open.taobao.com/api.htm?docId=46&docType=2"
+  },
+  "paths": {}
+}

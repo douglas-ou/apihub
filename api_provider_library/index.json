@@ -8,6 +8,78 @@
       "timestamp": "20241221_130832",
       "endpoints_count": 20,
       "spec_file": "petstore.swagger.io_20241221_130832_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://open.taobao.com/api.htm?docId=46&docType=2",
+      "doc_url": "https://open.taobao.com/api.htm?docId=46&docType=2",
+      "version": "1.0.0",
+      "timestamp": "20241222_093700",
+      "endpoints_count": 0,
+      "spec_file": "open.taobao.com_20241222_093700_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://open.taobao.com/api.htm?docId=46&docType=2",
+      "doc_url": "https://open.taobao.com/api.htm?docId=46&docType=2",
+      "version": "1.0.0",
+      "timestamp": "20241222_094041",
+      "endpoints_count": 0,
+      "spec_file": "open.taobao.com_20241222_094041_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://open.taobao.com/api.htm?docId=46&docType=2",
+      "doc_url": "https://open.taobao.com/api.htm?docId=46&docType=2",
+      "version": "1.0.0",
+      "timestamp": "20241222_094210",
+      "endpoints_count": 0,
+      "spec_file": "open.taobao.com_20241222_094210_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://open.taobao.com/api.htm?docId=46&docType=2",
+      "doc_url": "https://open.taobao.com/api.htm?docId=46&docType=2",
+      "version": "1.0.0",
+      "timestamp": "20241222_094653",
+      "endpoints_count": 0,
+      "spec_file": "open.taobao.com_20241222_094653_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://open.taobao.com/api.htm?docId=46&docType=2",
+      "doc_url": "https://open.taobao.com/api.htm?docId=46&docType=2",
+      "version": "1.0.0",
+      "timestamp": "20241222_110033",
+      "endpoints_count": 0,
+      "spec_file": "open.taobao.com_20241222_110033_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://open.taobao.com/api.htm?docId=46&docType=2",
+      "doc_url": "https://open.taobao.com/api.htm?docId=46&docType=2",
+      "version": "1.0.0",
+      "timestamp": "20241222_110240",
+      "endpoints_count": 0,
+      "spec_file": "open.taobao.com_20241222_110240_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://coinmarketcap.com/api/documentation/v1/",
+      "doc_url": "https://coinmarketcap.com/api/documentation/v1/",
+      "version": "1.0.0",
+      "timestamp": "20241222_111223",
+      "endpoints_count": 0,
+      "spec_file": "coinmarketcap.com_20241222_111223_openapi.json"
+    },
+    {
+      "name": "API Documentation",
+      "description": "API documentation crawled from https://www.xfyun.cn/doc/asr/voicedictation/API.html",
+      "doc_url": "https://www.xfyun.cn/doc/asr/voicedictation/API.html",
+      "version": "1.0.0",
+      "timestamp": "20241222_111314",
+      "endpoints_count": 3,
+      "spec_file": "www.xfyun.cn_20241222_111314_openapi.json"
     }
   ]
 }

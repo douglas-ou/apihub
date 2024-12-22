@@ -1,0 +1,67 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Documentation",
+    "version": "1.0.0",
+    "description": "API documentation crawled from https://www.xfyun.cn/doc/asr/voicedictation/API.html"
+  },
+  "paths": {
+    "/v2/iat": {
+      "get": {
+        "summary": "那么 signature原始字段(signature_origin)则为：",
+        "description": "那么 signature原始字段(signature_origin)则为：",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    ":=": {
+      "get": {
+        "summary": "# 鉴权url示例(golang)",
+        "description": "# 鉴权url示例(golang)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "(FileInputStream": {
+      "put": {
+        "summary": "发送数据时，如果间隔时间太短，可能会导致引擎识别有误。\n建议每次发送音频间隔40ms，每次发送音频字...",
+        "description": "发送数据时，如果间隔时间太短，可能会导致引擎识别有误。\n建议每次发送音频间隔40ms，每次发送音频字节数（即java示例demo中的frameSize）为一帧音频大小的整数倍。",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

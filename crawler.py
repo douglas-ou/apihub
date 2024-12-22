@@ -20,12 +20,17 @@ from openai import OpenAI
 import requests
 
 
+# def extract_text_from_html(html_content, base_url: str = None):
+#     return html2text.html2text(html_content, baseurl=base_url)
+
+
 class APICrawler:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, max_urls: int = None):
         """Initialize the crawler with a base URL to crawl."""
         self.base_url = base_url
         self.visited_urls: Set[str] = set()
         self.api_docs: Dict[str, dict] = {}
+        self.max_urls = max_urls
         
     async def find_openapi_json(self) -> Optional[dict]:
         """
@@ -47,10 +52,11 @@ class APICrawler:
             'swagger/v2/swagger.json'  # Another common Swagger 2.0 path
         ]
         
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(connect=3, total=10)) as session:
             for path in common_paths:
                 try:
                     url = urljoin(self.base_url, path)
+                    print('OAS URL:', url)
                     async with session.get(url) as response:
                         if response.status == 200:
                             try:
@@ -72,7 +78,7 @@ class APICrawler:
         Crawl subpages of the documentation site to find API documentation pages.
         Returns a list of URLs that appear to be API documentation.
         """
-        api_doc_urls = []
+        api_doc_urls = [self.base_url]
         to_visit = {self.base_url}
         base_domain = urlparse(self.base_url).netloc
         
@@ -94,8 +100,19 @@ class APICrawler:
                 # Filter out exceptions and add API doc URLs
                 for result in results:
                     if isinstance(result, str) and result:
-                        api_doc_urls.append(result)
-        
+                        if result not in api_doc_urls:
+                            url = result
+                            if '#' in url:
+                                url = url.split('#')[0]
+                            if url in api_doc_urls:
+                                continue
+                            api_doc_urls.append(result)
+
+                        if self.max_urls and len(api_doc_urls) >= self.max_urls:
+                            break
+                if self.max_urls and len(api_doc_urls) >= self.max_urls:
+                    break
+
         return api_doc_urls
         
     async def process_page(
@@ -107,6 +124,7 @@ class APICrawler:
     ) -> Optional[str]:
         """Process a single page: extract links and determine if it's an API doc."""
         try:
+            print('get:', url)
             async with session.get(url) as response:
                 if response.status != 200:
                     return None
@@ -114,14 +132,17 @@ class APICrawler:
                 content_type = response.headers.get('content-type', '')
                 if 'text/html' not in content_type.lower():
                     return None
-                
+
                 html = await response.text()
+                print('get html:', url, len(html))
                 soup = BeautifulSoup(html, 'html.parser')
                 
                 # Extract all links
                 for link in soup.find_all('a', href=True):
                     href = link['href']
                     absolute_url = urljoin(url, href)
+                    if '#' in absolute_url:
+                        absolute_url = absolute_url.split('#')[0]
                     
                     # Only follow links on the same domain
                     if (
@@ -136,7 +157,8 @@ class APICrawler:
                     
                 return None
                     
-        except (aiohttp.ClientError, asyncio.TimeoutError):
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f'get: {url} failed: {e}')
             return None
             
     def is_api_doc_page(self, soup: BeautifulSoup) -> bool:
@@ -185,51 +207,51 @@ class APICrawler:
                         return None
                         
                     html = await response.text()
-                    soup = BeautifulSoup(html, 'html.parser')
+                    # soup = BeautifulSoup(html, 'html.parser')
                     
                     # Extract endpoints from the page
-                    endpoints = []
+                    # endpoints = []
+                    #
+                    # # Look for common API endpoint patterns in code blocks
+                    # for code_block in soup.find_all(['code', 'pre']):
+                    #     text = code_block.get_text()
+                    #     # Look for HTTP method + path patterns
+                    #     if any(method in text.upper() for method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
+                    #         endpoint = self.extract_endpoint_info(code_block)
+                    #         if endpoint:
+                    #             endpoints.append(endpoint)
                     
-                    # Look for common API endpoint patterns in code blocks
-                    for code_block in soup.find_all(['code', 'pre']):
-                        text = code_block.get_text()
-                        # Look for HTTP method + path patterns
-                        if any(method in text.upper() for method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']):
-                            endpoint = self.extract_endpoint_info(code_block)
-                            if endpoint:
-                                endpoints.append(endpoint)
-                    
-                    if not endpoints:
-                        # Try AI-based parsing as fallback
-                        ai_spec = await self.parse_with_ai(html)
-                        if ai_spec:
-                            return ai_spec
-                        return None
+                    # if not endpoints:
+                    # Try AI-based parsing as fallback
+                    ai_spec = await self.parse_with_ai(html)
+                    if ai_spec:
+                        return ai_spec
+                    return None
                         
                     # Convert to OpenAPI format
-                    paths = {}
-                    for endpoint in endpoints:
-                        method = endpoint['method'].lower()
-                        path = endpoint['path']
-                        
-                        if path not in paths:
-                            paths[path] = {}
-                            
-                        paths[path][method] = {
-                            'summary': endpoint.get('summary', ''),
-                            'description': endpoint.get('description', ''),
-                            'parameters': endpoint.get('parameters', []),
-                            'responses': {
-                                '200': {
-                                    'description': 'Successful response',
-                                    'content': endpoint.get('response', {})
-                                }
-                            }
-                        }
-                    
-                    return {
-                        'paths': paths
-                    }
+                    # paths = {}
+                    # for endpoint in endpoints:
+                    #     method = endpoint['method'].lower()
+                    #     path = endpoint['path']
+                    #
+                    #     if path not in paths:
+                    #         paths[path] = {}
+                    #
+                    #     paths[path][method] = {
+                    #         'summary': endpoint.get('summary', ''),
+                    #         'description': endpoint.get('description', ''),
+                    #         'parameters': endpoint.get('parameters', []),
+                    #         'responses': {
+                    #             '200': {
+                    #                 'description': 'Successful response',
+                    #                 'content': endpoint.get('response', {})
+                    #             }
+                    #         }
+                    #     }
+                    #
+                    # return {
+                    #     'paths': paths
+                    # }
                     
         except (aiohttp.ClientError, asyncio.TimeoutError):
             return None
@@ -353,14 +375,14 @@ Documentation text:
 
             # Call Tongyi Qianwen API with function tools
             completion = client.chat.completions.create(
-                model="qwen-plus",
+                model="qwen-long",
                 messages=[
                     {"role": "system", "content": "You are an API documentation parser. Extract API details and format them as OpenAPI specifications. Use the provided function to structure the output."},
                     {"role": "user", "content": prompt}
                 ],
                 tools=tools,
                 tool_choice="auto",
-                result_format="message"
+                # result_format="message"
             )
 
             # Parse the response
@@ -419,6 +441,7 @@ Documentation text:
                 return None
 
         except Exception as e:
+            raise
             print(f"AI parsing failed: {str(e)}")
             return None
 
@@ -472,11 +495,13 @@ Documentation text:
         Returns the final OpenAPI specification.
         """
         # Try to find existing openapi.json first
-        if spec := await self.find_openapi_json():
-            return spec
+        # if spec := await self.find_openapi_json():
+        #     print('SPEC:', spec)
+        #     return spec
             
         # If no openapi.json found, crawl and parse the documentation
         doc_urls = await self.crawl_subpages()
+        print('DOCS:', doc_urls)
         for url in doc_urls:
             if spec := await self.parse_api_page(url):
                 self.api_docs[url] = spec
@@ -484,7 +509,7 @@ Documentation text:
         return self.combine_specs()
 
 
-async def main(url: str) -> dict:
+async def main(url: str, max_urls: int = None) -> dict:
     """
     Main entry point for the crawler.
     
@@ -494,7 +519,7 @@ async def main(url: str) -> dict:
     Returns:
         dict: The OpenAPI specification, either found or generated
     """
-    crawler = APICrawler(url)
+    crawler = APICrawler(url, max_urls=max_urls)
     return await crawler.crawl()
 
 
@@ -561,7 +586,8 @@ if __name__ == "__main__":
         sys.exit(1)
         
     input_url = sys.argv[1]
-    
+    # input_url = 'https://open.taobao.com/api.htm?docId=46&docType=2'
+
     # Run the crawler
     openapi_spec = asyncio.run(main(input_url))
     
