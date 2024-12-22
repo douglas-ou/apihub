@@ -1,13 +1,22 @@
-import httpx
 from openai import OpenAI
 import json
+import os
+
+
+class QWENAIInfo:
+    api_key = os.getenv('QWEN_API_KEY')
+    base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    default_model = "qwen-plus"
+
+
+info = QWENAIInfo()
 
 client = OpenAI(
-    api_key=api_key,
-    http_client=httpx.Client(
-        proxies={"http://": env.OPENAI_PROXY, "https://": env.OPENAI_PROXY} if env.OPENAI_PROXY else None
-    ),
-    base_url=base_url
+    api_key=info.api_key,
+    # http_client=httpx.Client(
+    #     proxies={"http://": env.OPENAI_PROXY, "https://": env.OPENAI_PROXY} if env.OPENAI_PROXY else None
+    # ),
+    base_url=info.base_url,
 )
 
 tools = [
@@ -42,12 +51,23 @@ def get_context_messages(content: str):
     ]
 
 
-async def async_handle_openapi_response(task):
+async def async_handle_openapi_response(content):
     # import asyncio
     # await asyncio.sleep(3)
     # print('return')
     # return
-    response = await client.chat.completions.create(**task.request_params)
+    request_params = dict(
+        model=info.default_model,
+        messages=get_context_messages(content),
+        tools=tools,
+        tool_choice={
+            "type": "function",
+            "function": {
+                "name": "get_openapi_json",
+            }
+        },
+    )
+    response = await client.chat.completions.create(**request_params)
     arguments: dict = json.loads(response.choices[0].message.tool_calls[0].function.arguments)
     openapi = arguments["openapi"]
     if not isinstance(openapi, dict):
